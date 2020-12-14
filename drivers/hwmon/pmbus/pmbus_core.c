@@ -286,6 +286,46 @@ int pmbus_update_fan(struct i2c_client *client, int page, int id,
 }
 EXPORT_SYMBOL_GPL(pmbus_update_fan);
 
+/*
+ * Read the coefficients for direct mode.
+ */
+int pmbus_read_coefficients(struct i2c_client *client,
+				struct pmbus_driver_info *info,
+				enum pmbus_sensor_classes sensor_class, u8 command)
+{
+	int rv;
+	union i2c_smbus_data data;
+	s8 R;
+	s16 m, b;
+
+	data.block[0] = 2;
+	data.block[1] = command;
+	data.block[2] = 0x01;
+
+	rv = i2c_smbus_xfer(client->adapter, client->addr, client->flags,
+			I2C_SMBUS_WRITE, PMBUS_COEFFICIENTS,
+			I2C_SMBUS_BLOCK_PROC_CALL, &data);
+
+	if (rv < 0)
+		goto abort;
+
+	if (data.block[0] != 5) {
+		rv = -ENODEV;
+		goto abort;
+	}
+
+	m = data.block[1] | (data.block[2] << 8);
+	b = data.block[3] | (data.block[4] << 8);
+	R = data.block[5];
+	info->m[sensor_class] = m;
+	info->b[sensor_class] = b;
+	info->R[sensor_class] = R;
+	info->format[sensor_class] = direct;
+abort:
+	return rv;
+}
+EXPORT_SYMBOL_GPL(pmbus_read_coefficients);
+
 int pmbus_read_word_data(struct i2c_client *client, int page, u8 reg)
 {
 	int rv;
@@ -1302,6 +1342,7 @@ static int pmbus_add_sensor_attrs(struct i2c_client *client,
 
 		pages = paged ? info->pages : 1;
 		for (page = 0; page < pages; page++) {
+<<<<<<< HEAD
 			if (!(info->func[page] & attrs->func))
 				continue;
 			ret = pmbus_add_sensor_attrs_one(client, data, info,
@@ -1310,6 +1351,31 @@ static int pmbus_add_sensor_attrs(struct i2c_client *client,
 			if (ret)
 				return ret;
 			index++;
+=======
+			if (info->func[page] & attrs->func) {
+				ret = pmbus_add_sensor_attrs_one(client, data, info,
+								 name, index, page,
+								 0xff, attrs, paged);
+				if (ret)
+					return ret;
+				index++;
+			}
+			if (info->phases[page]) {
+				int phase;
+
+				for (phase = 0; phase < info->phases[page];
+				     phase++) {
+					if (!(info->pfunc[phase] & attrs->func))
+						continue;
+					ret = pmbus_add_sensor_attrs_one(client,
+						data, info, name, index, page,
+						phase, attrs, paged);
+					if (ret)
+						return ret;
+					index++;
+				}
+			}
+>>>>>>> Add support for PIM4328, PIM4820 and PIM4006 series power interface modules
 		}
 		attrs++;
 	}
@@ -2140,8 +2206,20 @@ static int pmbus_init_common(struct i2c_client *client, struct pmbus_data *data,
 
 	/* Enable PEC if the controller supports it */
 	ret = i2c_smbus_read_byte_data(client, PMBUS_CAPABILITY);
-	if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK))
+	if (ret >= 0 && ret != 0xff && (ret & PB_CAPABILITY_ERROR_CHECK))
 		client->flags |= I2C_CLIENT_PEC;
+<<<<<<< HEAD
+=======
+	
+	/*
+	 * Check if the chip is write protected. If it is, we can not clear
+	 * faults, and we should not try it. Also, in that case, writes into
+	 * limit registers need to be disabled.
+	 */
+	ret = i2c_smbus_read_byte_data(client, PMBUS_WRITE_PROTECT);
+	if (ret > 0 && ret != 0xff && (ret & PB_WP_ANY))
+		data->flags |= PMBUS_WRITE_PROTECTED | PMBUS_SKIP_STATUS_CHECK;
+>>>>>>> Add support for PIM4328, PIM4820 and PIM4006 series power interface modules
 
 	if (data->info->pages)
 		pmbus_clear_faults(client);

@@ -136,24 +136,58 @@ static int pmbus_identify(struct i2c_client *client,
 		}
 	}
 
-	/*
-	 * We should check if the COEFFICIENTS register is supported.
-	 * If it is, and the chip is configured for direct mode, we can read
-	 * the coefficients from the chip, one set per group of sensor
-	 * registers.
-	 *
-	 * To do this, we will need access to a chip which actually supports the
-	 * COEFFICIENTS command, since the command is too complex to implement
-	 * without testing it. Until then, abort if a chip configured for direct
-	 * mode was detected.
-	 */
-	if (info->format[PSC_VOLTAGE_OUT] == direct) {
-		ret = -ENODEV;
-		goto abort;
-	}
-
 	/* Try to find sensor groups  */
 	pmbus_find_sensor_groups(client, info);
+
+	/*
+	 * If the chip is configured for direct mode we try to
+	 * read the COEFFICIENTS register from the chip,
+	 * one set per group of sensor registers.
+	 */
+	if (info->format[PSC_VOLTAGE_OUT] == direct) 
+	{
+		if(!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BLOCK_PROC_CALL)) {
+			ret = -ENODEV;
+			goto abort;
+		}
+		if(info->func[0] & PMBUS_HAVE_VOUT)
+			pmbus_read_coefficients(client, info,
+						PSC_VOLTAGE_OUT,
+						PMBUS_READ_VOUT);
+		else if(info->func[0] & PMBUS_HAVE_VCAP)
+			pmbus_read_coefficients(client, info,
+						PSC_VOLTAGE_OUT,
+						PMBUS_READ_VCAP);
+		if(info->func[0] & PMBUS_HAVE_IOUT)
+			pmbus_read_coefficients(client, info,
+						PSC_CURRENT_OUT,
+						PMBUS_READ_IOUT);
+		if(info->func[0] & PMBUS_HAVE_VIN)
+			pmbus_read_coefficients(client, info,
+						PSC_VOLTAGE_IN,
+						PMBUS_READ_VIN);
+		if(info->func[0] & PMBUS_HAVE_IIN)
+			pmbus_read_coefficients(client, info,
+						PSC_CURRENT_IN,
+						PMBUS_READ_IIN);
+		if(info->func[0] & PMBUS_HAVE_POUT)
+			pmbus_read_coefficients(client, info,
+						PSC_POWER,
+						PMBUS_READ_POUT);
+		else if(info->func[0] & PMBUS_HAVE_PIN)
+			pmbus_read_coefficients(client, info,
+						PSC_POWER,
+						PMBUS_READ_PIN);
+		if(info->func[0] & PMBUS_HAVE_FAN12)
+			pmbus_read_coefficients(client, info,
+						PSC_FAN,
+						PMBUS_READ_FAN_SPEED_1);
+		if(info->func[0] & PMBUS_HAVE_TEMP)
+			pmbus_read_coefficients(client, info,
+						PSC_TEMPERATURE,
+						PMBUS_READ_TEMPERATURE_1);
+	}
+
 abort:
 	return ret;
 }
