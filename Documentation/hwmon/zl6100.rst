@@ -83,7 +83,15 @@ Supported chips:
 
     Datasheet: http://www.intersil.com/data/fn/fn7914.pdf
 
-  * Ericsson BMR450, BMR451
+  * Renesas ZL8802
+
+    Prefix: 'zl8802'
+
+    Addresses scanned: -
+
+    Datasheet: https://www.renesas.com/eu/en/document/dst/zl8802-datasheet
+
+  * Flex BMR450, BMR451
 
     Prefix: 'bmr450', 'bmr451'
 
@@ -91,17 +99,39 @@ Supported chips:
 
     Datasheet:
 
-http://archive.ericsson.net/service/internet/picov/get?DocNo=28701-EN/LZT146401
+https://flexpowermodules.com/resources/fpm-techspec-bmr450-digital-pol-regulators-20a
 
-  * Ericsson BMR462, BMR463, BMR464
+  * Flex BMR462, BMR463, BMR464
 
     Prefixes: 'bmr462', 'bmr463', 'bmr464'
 
     Addresses scanned: -
 
-    Datasheet:
+    Datasheet: https://flexpowermodules.com/resources/fpm-techspec-bmr462
 
-	http://archive.ericsson.net/service/internet/picov/get?DocNo=28701-EN/LZT146256
+  * Flex BMR465, BMR467
+
+    Prefixes: 'bmr465', 'bmr467'
+
+    Addresses scanned: -
+
+    Datasheet: https://flexpowermodules.com/resources/fpm-techspec-bmr465-digital-pol
+
+  * Flex BMR466
+
+    Prefixes: 'bmr466'
+
+    Addresses scanned: -
+
+    Datasheet: https://flexpowermodules.com/resources/fpm-techspec-bmr466-8x12
+
+  * Flex BMR469
+
+    Prefixes: 'bmr469'
+
+    Addresses scanned: -
+
+    Datasheet: https://flexpowermodules.com/resources/fpm-techspec-bmr4696001
 
 Author: Guenter Roeck <linux@roeck-us.net>
 
@@ -109,7 +139,7 @@ Author: Guenter Roeck <linux@roeck-us.net>
 Description
 -----------
 
-This driver supports hardware monitoring for Intersil / Zilker Labs ZL6100 and
+This driver supports hardware monitoring for Renesas / Intersil / Zilker Labs ZL6100 and
 compatible digital DC-DC controllers.
 
 The driver is a client driver to the core PMBus driver. Please see
@@ -147,8 +177,8 @@ Module parameters
 delay
 -----
 
-Intersil/Zilker Labs DC-DC controllers require a minimum interval between I2C
-bus accesses. According to Intersil, the minimum interval is 2 ms, though 1 ms
+Renesas/Intersil/Zilker Labs DC-DC controllers require a minimum interval between I2C
+bus accesses. According to Renesas/Intersil, the minimum interval is 2 ms, though 1 ms
 appears to be sufficient and has not caused any problems in testing. The problem
 is known to affect all currently supported chips. For manual override, the
 driver provides a writeable module parameter, 'delay', which can be used to set
@@ -158,7 +188,7 @@ the interval to a value between 0 and 65,535 microseconds.
 Sysfs entries
 -------------
 
-The following attributes are supported. Limits are read-write; all other
+The following attributes are supported. Limits and alarms are read-write; all other
 attributes are read-only.
 
 ======================= ========================================================
@@ -183,7 +213,7 @@ in2_lcrit_alarm		VMON/VDRV voltage critical low alarm.
 in2_crit_alarm		VMON/VDRV voltage critical high alarm.
 
 			vmon attributes are supported on ZL2004, ZL9101M,
-			and ZL9117M only.
+			ZL9117M, ZLS4009 and ZL8802 only.
 
 inX_label		"vout1"
 inX_input		Measured output voltage.
