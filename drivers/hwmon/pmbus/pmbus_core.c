@@ -987,6 +987,21 @@ static ssize_t pmbus_show_boolean(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", val);
 }
 
+static ssize_t pmbus_set_boolean(struct device *dev,
+				  struct device_attribute *da,
+				  const char *buf, size_t count)
+{
+	struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+	struct i2c_client *client = to_i2c_client(dev->parent);
+	struct pmbus_data *data = i2c_get_clientdata(client);
+	u8 page = pb_index_to_page(attr->index);
+
+	mutex_lock(&data->update_lock);
+	pmbus_clear_fault_page(client, page);
+	mutex_unlock(&data->update_lock);
+	return count;
+}
+
 static ssize_t pmbus_show_sensor(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
 {
@@ -1102,7 +1117,8 @@ static int pmbus_add_boolean(struct pmbus_data *data,
 		 name, seq, type);
 	boolean->s1 = s1;
 	boolean->s2 = s2;
-	pmbus_attr_init(a, boolean->name, 0444, pmbus_show_boolean, NULL,
+	pmbus_attr_init(a, boolean->name, 0644,
+			pmbus_show_boolean, pmbus_set_boolean,
 			(reg << 16) | mask);
 
 	return pmbus_add_attribute(data, &a->dev_attr.attr);
@@ -1342,7 +1358,6 @@ static int pmbus_add_sensor_attrs(struct i2c_client *client,
 
 		pages = paged ? info->pages : 1;
 		for (page = 0; page < pages; page++) {
-<<<<<<< HEAD
 			if (!(info->func[page] & attrs->func))
 				continue;
 			ret = pmbus_add_sensor_attrs_one(client, data, info,
@@ -1351,31 +1366,6 @@ static int pmbus_add_sensor_attrs(struct i2c_client *client,
 			if (ret)
 				return ret;
 			index++;
-=======
-			if (info->func[page] & attrs->func) {
-				ret = pmbus_add_sensor_attrs_one(client, data, info,
-								 name, index, page,
-								 0xff, attrs, paged);
-				if (ret)
-					return ret;
-				index++;
-			}
-			if (info->phases[page]) {
-				int phase;
-
-				for (phase = 0; phase < info->phases[page];
-				     phase++) {
-					if (!(info->pfunc[phase] & attrs->func))
-						continue;
-					ret = pmbus_add_sensor_attrs_one(client,
-						data, info, name, index, page,
-						phase, attrs, paged);
-					if (ret)
-						return ret;
-					index++;
-				}
-			}
->>>>>>> Add support for PIM4328, PIM4820 and PIM4006 series power interface modules
 		}
 		attrs++;
 	}
