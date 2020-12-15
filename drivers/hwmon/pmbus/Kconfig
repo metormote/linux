@@ -221,4 +221,14 @@ config SENSORS_MAX15301
 
           This driver can also be built as a module. If so, the module will
           be called max15301.
+
+config SENSORS_STPDDC60
+	tristate "ST STPDDC60"
+	help
+	  If you say yes here you get hardware monitoring support for ST
+	  STPDDC60 Universal Digital Multicell Controller, as well as for
+	  Flex MBR481.
+
+	  This driver can also be built as a module. If so, the module will
+          be called stpddc60.
 endif # PMBUS
