@@ -977,6 +977,21 @@ static ssize_t pmbus_show_boolean(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", val);
 }
 
+static ssize_t pmbus_set_boolean(struct device *dev,
+				 struct device_attribute *da,
+				 const char *buf, size_t count)
+{
+	struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+	struct i2c_client *client = to_i2c_client(dev->parent);
+	struct pmbus_data *data = i2c_get_clientdata(client);
+	u8 page = pb_index_to_page(attr->index);
+
+	mutex_lock(&data->update_lock);
+	pmbus_clear_fault_page(client, page);
+	mutex_unlock(&data->update_lock);
+	return count;
+}
+
 static ssize_t pmbus_show_sensor(struct device *dev,
 				 struct device_attribute *devattr, char *buf)
 {
@@ -1087,6 +1102,7 @@ static int pmbus_add_boolean(struct pmbus_data *data,
 {
 	struct pmbus_boolean *boolean;
 	struct sensor_device_attribute *a;
+	bool readonly = false;
 
 	if (WARN((s1 && !s2) || (!s1 && s2), "Bad s1/s2 parameters\n"))
 		return -EINVAL;
@@ -1099,9 +1115,12 @@ static int pmbus_add_boolean(struct pmbus_data *data,
 
 	snprintf(boolean->name, sizeof(boolean->name), "%s%d_%s",
 		 name, seq, type);
+	if (data->flags & PMBUS_WRITE_PROTECTED)
+		readonly = true;
 	boolean->s1 = s1;
 	boolean->s2 = s2;
-	pmbus_attr_init(a, boolean->name, 0444, pmbus_show_boolean, NULL,
+	pmbus_attr_init(a, boolean->name, readonly ? 0444 : 0644,
+			pmbus_show_boolean, pmbus_set_boolean,
 			pb_reg_to_index(page, reg, mask));
 
 	return pmbus_add_attribute(data, &a->dev_attr.attr);
