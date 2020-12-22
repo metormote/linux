@@ -75,8 +75,7 @@ static int stpddc60_read_byte_data(struct i2c_client *client, int page, int reg)
 	return ret;
 }
 
-static int stpddc60_read_word_data(struct i2c_client *client, int page,
-				 int phase, int reg)
+static int stpddc60_read_word_data(struct i2c_client *client, int page, int reg)
 {
 	int ret;
 
@@ -85,14 +84,14 @@ static int stpddc60_read_word_data(struct i2c_client *client, int page,
 
 	switch (reg) {
 	case PMBUS_READ_VOUT:
-		ret = pmbus_read_word_data(client, page, phase, reg);
+		ret = pmbus_read_word_data(client, page, reg);
 		if(ret < 0)
 			goto abort;
 		ret = stpddc60_mv2l(stpddc60_vid2mv(ret));
 		break;
 	case PMBUS_VOUT_OV_FAULT_LIMIT:
 	case PMBUS_VOUT_UV_FAULT_LIMIT:
-		ret = pmbus_read_word_data(client, page, phase, reg);
+		ret = pmbus_read_word_data(client, page, reg);
 		if(ret < 0)
 			goto abort;
 		ret &= 0x07ff;
@@ -162,7 +161,7 @@ static int stpddc60_probe(struct i2c_client *client,
 	info->read_word_data = stpddc60_read_word_data;
 	info->write_word_data = stpddc60_write_word_data;
 
-	return pmbus_do_probe(client, info);
+	return pmbus_do_probe(client, mid, info);
 }
 
 static struct i2c_driver stpddc60_driver = {

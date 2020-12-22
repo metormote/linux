@@ -48,8 +48,7 @@ static const struct i2c_device_id pim4328_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, pim4328_id);
 
-static int pim4328_read_word_data(struct i2c_client *client, int page,
-				 int phase, int reg)
+static int pim4328_read_word_data(struct i2c_client *client, int page, int reg)
 {
 	const struct pmbus_driver_info *info = pmbus_get_driver_info(client);
 	struct pim4328_data *data = to_pim4328_data(info);
@@ -63,7 +62,7 @@ static int pim4328_read_word_data(struct i2c_client *client, int page,
 		ret = pmbus_read_byte_data(client, page, PMBUS_STATUS_BYTE);
 		if (ret >= 0) {
 			if (data->id == pim4006) {
-				status = pmbus_read_word_data(client, page, 0xff,
+				status = pmbus_read_word_data(client, page,
 						PIM4328_MFR_FET_CHECKSTATUS);
 				if (status > 0 && (status & 0x0030))
 					ret |= 0x08;
@@ -92,22 +91,6 @@ static int pim4328_read_word_data(struct i2c_client *client, int page,
 			}
 		}
 		break;
-	case PMBUS_READ_VIN:
-		if (phase != 0xff) {
-			ret = pmbus_read_word_data(client, page, phase,
-				phase == 0 ? PIM4328_MFR_READ_VINA : PIM4328_MFR_READ_VINB);
-		}
-		else
-			ret = -ENODATA;
-		break;
-	case PMBUS_READ_IIN:
-		if (phase != 0xff) {
-			ret = pmbus_read_word_data(client, page, phase,
-				phase == 0 ? PIM4328_MFR_READ_IINA : PIM4328_MFR_READ_IINB);
-		}
-		else
-			ret = -ENODATA;
-		break;
 	default:
 		ret = -ENODATA;
 	}
@@ -126,7 +109,7 @@ static int pim4328_read_byte_data(struct i2c_client *client, int page, int reg)
 
 	switch (reg) {
 	case PMBUS_STATUS_BYTE:
-		ret = pim4328_read_word_data(client, page, 0xff, PMBUS_STATUS_WORD);
+		ret = pim4328_read_word_data(client, page, PMBUS_STATUS_WORD);
 		if (ret > 0)
 			ret &= 0xff;
 		break;
@@ -206,20 +189,14 @@ static int pim4328_probe(struct i2c_client *client,
 				| PMBUS_HAVE_IIN | PMBUS_HAVE_STATUS_INPUT;
 			break;
 		case pim4328:
-			info->phases[0] = 2;
 			info->format[PSC_VOLTAGE_IN] = direct;
 			info->func[0] = PMBUS_HAVE_VCAP | PMBUS_HAVE_VIN
 				| PMBUS_HAVE_TEMP | PMBUS_HAVE_IOUT;
-			info->pfunc[0] = PMBUS_HAVE_VIN;
-			info->pfunc[1] = PMBUS_HAVE_VIN;
 			break;
 		case pim4006:
-			info->phases[0] = 2,
 			info->format[PSC_VOLTAGE_IN] = linear;
-			info->func[0] = PMBUS_PHASE_VIRTUAL | PMBUS_HAVE_VIN
+			info->func[0] = PMBUS_HAVE_VIN
 				| PMBUS_HAVE_TEMP | PMBUS_HAVE_IOUT;
-			info->pfunc[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN;
-			info->pfunc[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN;
 			break;
 		default:
 			goto abort;
@@ -282,7 +259,7 @@ static int pim4328_probe(struct i2c_client *client,
 		}
 	}
 
-	return pmbus_do_probe(client, info);
+	return pmbus_do_probe(client, mid, info);
 abort:
 	return -ENODEV;
 }

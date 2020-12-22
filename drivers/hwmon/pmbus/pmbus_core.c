@@ -991,13 +991,12 @@ static ssize_t pmbus_set_boolean(struct device *dev,
 				  struct device_attribute *da,
 				  const char *buf, size_t count)
 {
-	struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
 	struct i2c_client *client = to_i2c_client(dev->parent);
 	struct pmbus_data *data = i2c_get_clientdata(client);
-	u8 page = pb_index_to_page(attr->index);
+	struct pmbus_sensor *sensor = to_pmbus_sensor(da);
 
 	mutex_lock(&data->update_lock);
-	pmbus_clear_fault_page(client, page);
+	pmbus_clear_fault_page(client, sensor->page);
 	mutex_unlock(&data->update_lock);
 	return count;
 }
@@ -1106,8 +1105,7 @@ static int pmbus_add_boolean(struct pmbus_data *data,
 {
 	struct pmbus_boolean *boolean;
 	struct sensor_device_attribute *a;
-	bool readonly = false;
-
+	
 	boolean = devm_kzalloc(data->dev, sizeof(*boolean), GFP_KERNEL);
 	if (!boolean)
 		return -ENOMEM;
@@ -1116,11 +1114,9 @@ static int pmbus_add_boolean(struct pmbus_data *data,
 
 	snprintf(boolean->name, sizeof(boolean->name), "%s%d_%s",
 		 name, seq, type);
-	if (data->flags & PMBUS_WRITE_PROTECTED)
-		readonly = true;
 	boolean->s1 = s1;
 	boolean->s2 = s2;
-	pmbus_attr_init(a, boolean->name, readonly ? 0444 : 0644,
+	pmbus_attr_init(a, boolean->name, 0644,
 			pmbus_show_boolean, pmbus_set_boolean,
 			(reg << 16) | mask);
 
@@ -2201,19 +2197,6 @@ static int pmbus_init_common(struct i2c_client *client, struct pmbus_data *data,
 	ret = i2c_smbus_read_byte_data(client, PMBUS_CAPABILITY);
 	if (ret >= 0 && ret != 0xff && (ret & PB_CAPABILITY_ERROR_CHECK))
 		client->flags |= I2C_CLIENT_PEC;
-
-	/*
-	 * Check if the chip is write protected. If it is, we can not clear
-	 * faults, and we should not try it. Also, in that case, writes into
-	 * limit registers need to be disabled.
-	 */
-	if (data->flags & PMBUS_WRITE_PROTECTED)
-		data->flags |= PMBUS_SKIP_STATUS_CHECK;
-	else {
-		ret = i2c_smbus_read_byte_data(client, PMBUS_WRITE_PROTECT);
-		if (ret > 0 && ret != 0xff && (ret & PB_WP_ANY))
-			data->flags |= PMBUS_WRITE_PROTECTED | PMBUS_SKIP_STATUS_CHECK;
-	}
 
 	if (data->info->pages)
 		pmbus_clear_faults(client);
