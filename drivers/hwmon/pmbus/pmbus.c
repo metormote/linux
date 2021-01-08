@@ -207,7 +207,8 @@ static int pmbus_probe(struct i2c_client *client)
 
 	device_info = (struct pmbus_device_info *)i2c_match_id(pmbus_id, client)->driver_data;
 	if (device_info->flags & PMBUS_SKIP_STATUS_CHECK ||
-			device_info->flags & PMBUS_READ_STATUS_AFTER_FAILED_CHECK) {
+	    device_info->flags & PMBUS_READ_STATUS_AFTER_FAILED_CHECK ||
+	    device_info->flags & PMBUS_WRITE_PROTECTED) {
 		pdata = devm_kzalloc(dev, sizeof(struct pmbus_platform_data),
 				     GFP_KERNEL);
 		if (!pdata)
@@ -218,6 +219,8 @@ static int pmbus_probe(struct i2c_client *client)
 			pdata->flags |= PMBUS_SKIP_STATUS_CHECK;
 		if (device_info->flags & PMBUS_READ_STATUS_AFTER_FAILED_CHECK)
 			pdata->flags |= PMBUS_READ_STATUS_AFTER_FAILED_CHECK;
+		if (device_info->flags & PMBUS_WRITE_PROTECTED)
+			pdata->flags |= PMBUS_WRITE_PROTECTED;
 	}
 
 	info->pages = device_info->pages;
@@ -247,13 +250,18 @@ static const struct pmbus_device_info pmbus_info_one_status = {
 	.flags = PMBUS_READ_STATUS_AFTER_FAILED_CHECK
 };
 
+static const struct pmbus_device_info pmbus_info_one_readonly = {
+	.pages = 1,
+	.flags = PMBUS_WRITE_PROTECTED
+};
+
 /*
  * Use driver_data to set the number of pages supported by the chip.
  */
 static const struct i2c_device_id pmbus_id[] = {
 	{"adp4000", (kernel_ulong_t)&pmbus_info_one},
-	{"bmr453", (kernel_ulong_t)&pmbus_info_one},
-	{"bmr454", (kernel_ulong_t)&pmbus_info_one},
+	{"bmr453", (kernel_ulong_t)&pmbus_info_one_readonly},
+	{"bmr454", (kernel_ulong_t)&pmbus_info_one_readonly},
 	{"dps460", (kernel_ulong_t)&pmbus_info_one_skip},
 	{"dps650ab", (kernel_ulong_t)&pmbus_info_one_skip},
 	{"dps800", (kernel_ulong_t)&pmbus_info_one_skip},

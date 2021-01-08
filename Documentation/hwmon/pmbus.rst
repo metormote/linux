@@ -115,6 +115,11 @@ on I2C bus #1::
 	$ modprobe pmbus
 	$ echo ltc2978 0x60 > /sys/bus/i2c/devices/i2c-1/new_device
 
+The WRITE_PROTECT command on the BMR453 and BMR454 has an interesting
+side effect in that it also triggers a STORE_DEFAULT_ALL. This makes this
+command dangerous and should be avoided for a device in operation. To avoid
+this problem these devices are set to readonly in the driver.
+
 
 Platform data support
 ---------------------
